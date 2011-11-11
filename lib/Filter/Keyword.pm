@@ -1,5 +1,6 @@
 package Filter::Keyword;
 
+# we need the PP implementation's version of remove_symbol
 use Package::Stash::PP;
 use Filter::Util::Call;
 use B qw(svref_2object);
