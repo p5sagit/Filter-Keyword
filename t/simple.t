@@ -4,9 +4,21 @@ use Filter::Keyword;
 
 BEGIN {
   (our $Kw = Filter::Keyword->new(
-    target_package => __PACKAGE__,
-    keyword_name => 'method'
-  ))->setup;
+    parser => {
+      target_package => __PACKAGE__,
+      keyword_name => 'method',
+      parser => sub {
+        my $obj = shift;
+        if (my ($stripped, $matches) = $obj->match_source('', '{')) {
+          my $name = $obj->current_match->[0];
+          $stripped =~ s/{/; sub ${name} { my \$self = shift;/;
+          return ($stripped, 1);
+        } else {
+          return ('', 1);
+        }
+      }
+    },
+  ))->install;
 }
 
 method main { 'YAY '.$self };
