@@ -1,51 +1,26 @@
 package Filter::Keyword::Parser;
-
-use Package::Stash::PP;
-use B qw(svref_2object);
-use Scalar::Util qw(set_prototype);
 use Moo;
 
-has parser => (is => 'ro', required => 1);
+use Scalar::Util qw(set_prototype);
 
 has reader => (is => 'ro', required => 1);
 
 has re_add => (is => 'ro', required => 1);
 
-has target_package => (is => 'ro', required => 1);
+has keywords => (is => 'ro', default => sub { [] });
 
-has keyword_name => (is => 'ro', required => 1);
-
-has stash => (is => 'lazy');
-
-sub _build_stash {
-  my ($self) = @_;
-  Package::Stash::PP->new($self->target_package);
+sub add_keyword {
+  push @{$_[0]->keywords}, $_[1];
 }
-
-has globref => (is => 'lazy', clearer => 'clear_globref');
-
-sub _build_globref {
-  no strict 'refs'; no warnings 'once';
-  \*{join'::',$_[0]->target_package,$_[0]->keyword_name}
-}
-
-after clear_globref => sub {
-  my ($self) = @_;
-  $self->stash->remove_symbol('&'.$self->keyword_name);
-  $self->globref_refcount(undef);
-};
-
-has globref_refcount => (is => 'rw');
-
-sub save_refcount {
-  my ($self) = @_;
-  $self->globref_refcount(svref_2object($self->globref)->REFCNT);
-}
-
-sub have_match {
-  my ($self) = @_;
-  return 0 unless defined($self->globref_refcount);
-  svref_2object($self->globref)->REFCNT > $self->globref_refcount;
+sub remove_keyword {
+  my ($self, $keyword) = @_;
+  my $keywords = $self->keywords;
+  for my $idx (0 .. $#$keywords) {
+    if ($keywords->[$idx] eq $keyword) {
+      splice @$keywords, $idx, 1;
+      last;
+    }
+  }
 }
 
 has current_match => (is => 'rw');
@@ -61,9 +36,11 @@ sub get_next {
     $self->${\$self->re_add};
     return ('', 0);
   }
-  if ($self->have_match) {
-    $self->clear_globref;
-    return $self->${\$self->parser};
+  for my $keyword (@{$self->keywords}) {
+    if ($keyword->have_match) {
+      $keyword->clear_globref;
+      return $keyword->parser->($keyword, $self);
+    }
   }
   return $self->check_match;
 }
@@ -71,7 +48,7 @@ sub get_next {
 sub fetch_more {
   my ($self) = @_;
   my $code = $self->code||'';
-  my ($extra_code, $not_eof) = $self->${\$self->reader};
+  my ($extra_code, $not_eof) = $self->reader->();
   $code .= $extra_code;
   $self->code($code);
   return $not_eof;
@@ -94,19 +71,21 @@ sub check_match {
     $self->fetch_more
       or return ('', 0);
   }
-  if (
-    my ($stripped, $matches)
-      = $self->match_source(
-          $self->keyword_name, qr/(\(|[A-Za-z][A-Za-z_0-9]*|{)/
-        )
-  ) {
-    my $sub = sub {};
-    set_prototype(\&$sub, '*;@') unless $matches->[0] eq '(';
-    { no warnings 'redefine'; *{$self->globref} = $sub; }
-    $self->save_refcount;
-    $self->current_match($matches);
-    $self->short_circuit(1);
-    return ($stripped, 1);
+  for my $keyword (@{ $self->keywords }) {
+    if (
+      my ($stripped, $matches)
+        = $self->match_source(
+            $keyword->keyword_name, qr/(\(|[A-Za-z][A-Za-z_0-9]*|{)/
+          )
+    ) {
+      my $sub = sub {};
+      set_prototype(\&$sub, '*;@') unless $matches->[0] eq '(';
+      { no warnings 'redefine', 'prototype'; *{$keyword->globref} = $sub; }
+      $keyword->save_refcount;
+      $self->current_match($matches);
+      $self->short_circuit(1);
+      return ($stripped, 1);
+    }
   }
   my $code = $self->code;
   $self->code('');
