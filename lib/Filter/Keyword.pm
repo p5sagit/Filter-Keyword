@@ -53,7 +53,15 @@ sub remove {
   $self->clear_globref;
 }
 
-has keyword_parser => (is => 'rw', weak_ref => 1, clearer => 1);
+has keyword_parser => (
+  is => 'rw',
+  weak_ref => 1,
+  clearer => 1,
+  handles => [
+    'match_source',
+    'current_match',
+  ],
+);
 
 has target_package => (is => 'ro', required => 1);
 has keyword_name   => (is => 'ro', required => 1);
