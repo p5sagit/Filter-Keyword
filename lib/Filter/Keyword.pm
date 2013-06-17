@@ -5,6 +5,7 @@ use Filter::Keyword::Filter;
 use Scalar::Util qw(weaken);
 use Package::Stash::PP;
 use B qw(svref_2object);
+use B::Hooks::EndOfScope;
 
 sub _compiling_file () {
   my $depth = 0;
@@ -21,13 +22,19 @@ sub _compiling_file () {
 my %filters;
 sub install {
   my ($self) = @_;
-  my $file = _compiling_file;
   $self->shadow_sub;
+
+  my $file = _compiling_file;
   my $filter = $filters{$file} ||= Filter::Keyword::Filter->new;
   $filter->install;
+
   my $parser = $filter->parser;
   $parser->add_keyword($self);
   $self->keyword_parser($parser);
+
+  on_scope_end {
+    $self->remove;
+  };
 }
 
 sub shadow_sub {
