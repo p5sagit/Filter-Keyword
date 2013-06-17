@@ -2,6 +2,15 @@ use strictures 1;
 use Test::More;
 use Filter::Keyword;
 
+sub ::dd {
+  use Data::Dumper ();
+  local $Data::Dumper::Useqq = 1;
+  local $Data::Dumper::Terse = 1;
+  my $out = Data::Dumper::Dumper($_[0]);
+  chomp $out;
+  return $out;
+}
+
 BEGIN {
   (our $Kw = Filter::Keyword->new(
     target_package => __PACKAGE__,

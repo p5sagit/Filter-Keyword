@@ -37,10 +37,13 @@ sub install {
   };
 }
 
+has _shadowed_sub => (is => 'rw', clearer => '_clear_shadowed_sub');
+
 sub shadow_sub {
   my $self = shift;
   my $stash = $self->stash;
   if (my $shadowed = $stash->get_symbol('&'.$self->keyword_name)) {
+    $self->_shadowed_sub($shadowed);
     $stash->remove_symbol('&'.$self->keyword_name);
     $stash->add_symbol('&__'.$self->keyword_name, $shadowed);
   }
@@ -51,6 +54,12 @@ sub remove {
   $self->keyword_parser->remove_keyword($self);
   $self->clear_keyword_parser;
   $self->clear_globref;
+  my $stash = $self->stash;
+  if (my $shadowed = $self->_shadowed_sub) {
+    $self->_clear_shadowed_sub;
+    $stash->remove_symbol('&__'.$self->keyword_name);
+    $stash->add_symbol('&'.$self->keyword_name, $shadowed);
+  }
 }
 
 has keyword_parser => (
