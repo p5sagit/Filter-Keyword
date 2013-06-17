@@ -13,7 +13,7 @@ sub _build_parser {
   my $self = shift;
   weaken $self;
   Filter::Keyword::Parser->new(
-    reader => sub { my $r = filter_read; ($_, $r) },
+    reader => sub { $_ = ''; my $r = filter_read; ($_, $r) },
     re_add => sub { filter_add($self) },
   );
 }

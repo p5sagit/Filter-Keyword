@@ -56,9 +56,10 @@ sub fetch_more {
 
 sub match_source {
   my ($self, $first, $second) = @_;
-  $self->fetch_more while $self->code =~ /$first\s+\Z/;
-  if (my @match = ($self->code =~ /(.*?${first}\s+${second})(.*)\Z/)) {
-    $self->code(pop @match);
+  $self->fetch_more while $self->code =~ /\A$first\s+\z/;
+  if (my @match = ($self->code =~ /(.*?${first}\s+${second})(.*\n?)\z/)) {
+    my $code = pop @match;
+    $self->code($code);
     my $found = shift(@match);
     return ($found, \@match);
   }
@@ -80,7 +81,7 @@ sub check_match {
     ) {
       my $sub = sub {};
       set_prototype(\&$sub, '*;@') unless $matches->[0] eq '(';
-      { no warnings 'redefine', 'prototype'; *{$keyword->globref} = $sub; }
+      { no warnings 'redefine'; *{$keyword->globref} = $sub; }
       $keyword->save_refcount;
       $self->current_match($matches);
       $self->short_circuit(1);
