@@ -100,9 +100,19 @@ sub have_match {
   svref_2object($self->globref)->REFCNT > $self->globref_refcount;
 }
 
-sub DEMOLISH {
-  my ($self) = @_;
-  $self->remove;
+sub inject_after_scope {
+  my $inject = shift;
+  on_scope_end {
+    filter_add(sub {
+      my($status) ;
+      $status = filter_read();
+      if ($status >= 0) {
+        $_ = $inject . $_;
+      }
+      filter_del();
+      $status ;
+    });
+  };
 }
 
 1;
