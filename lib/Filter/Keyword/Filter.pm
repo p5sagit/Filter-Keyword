@@ -33,8 +33,6 @@ sub install {
 sub filter {
   my ($self) = @_;
   my ($string, $code) = $self->parser->get_next;
-  print $string;
-  #warn "# ".::dd($string)."\n";
   $_ = $string;
   return $code;
 }
