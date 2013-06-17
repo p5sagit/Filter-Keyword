@@ -1,31 +1,59 @@
 use strictures 1;
-use Test::More qw(no_plan);
+use Test::More;
 use Filter::Keyword;
 
 BEGIN {
   (our $Kw = Filter::Keyword->new(
-    parser => {
-      target_package => __PACKAGE__,
-      keyword_name => 'method',
-      parser => sub {
-        my $obj = shift;
-        if (my ($stripped, $matches) = $obj->match_source('', '{')) {
-          my $name = $obj->current_match->[0];
-          $stripped =~ s/{/; sub ${name} { my \$self = shift;/;
-          return ($stripped, 1);
-        } else {
-          return ('', 1);
-        }
+    target_package => __PACKAGE__,
+    keyword_name => 'method',
+    parser => sub {
+      my $kw = shift;
+      if (my ($stripped, $matches) = $kw->match_source('', '{')) {
+        my $name = $kw->current_match->[0];
+        $stripped =~ s/{/; sub ${name} { my \$self = shift;/;
+        return ($stripped, 1);
+      }
+      else {
+        return ('', 1);
+      }
+    },
+  ))->install;
+  (our $Kw2 = Filter::Keyword->new(
+    target_package => __PACKAGE__,
+    keyword_name => 'function',
+    parser => sub {
+      my $kw = shift;
+      if (my ($stripped, $matches) = $kw->match_source('', '{')) {
+        my $name = $kw->current_match->[0];
+        $stripped =~ s/{/; sub ${name} {/;
+        return ($stripped, 1);
+      }
+      else {
+        return ('', 1);
       }
     },
   ))->install;
 }
 
-method main { 'YAY '.$self };
+method yay { is(__LINE__, 38, 'line number correct inside method' ); "YAY $self" } is(__LINE__, 38, 'line number correct on same line after method');
+
+is(__LINE__, 40, 'line number correct after first method');
 
 my $x = "method foo bar baz";
 
-method spoon { 'I HAZ A SPOON'};
+is(__PACKAGE__->yay, 'YAY ' . __PACKAGE__, 'result of method correct');
 
-warn __PACKAGE__->main;
-warn __PACKAGE__->spoon;
+method spoon {
+  is(__LINE__, 47, 'line number correct in multiline method');
+  'I HAZ A SPOON'
+}
+
+is(__PACKAGE__->spoon, 'I HAZ A SPOON', 'result of second method correct');
+
+function fun { is(__LINE__, 53, 'line number in function correct'); 'OH WHAT FUN' }
+
+is(__PACKAGE__->fun, 'OH WHAT FUN', 'result of function correct');
+
+is(__LINE__, 57, 'line number after function correct');
+
+done_testing;
