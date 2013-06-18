@@ -85,7 +85,7 @@ sub fetch_more {
 sub match_source {
   my ($self, $first, $second) = @_;
   $self->fetch_more while $self->code =~ /\A$first\s+\z/;
-  if (my @match = ($self->code =~ /(.*?${first}\s+${second})(.*\n?)\z/)) {
+  if (my @match = ($self->code =~ /(.*?${first}\s+${second})((?s).*)\z/)) {
     my $code = pop @match;
     $self->code($code);
     my $found = shift(@match);

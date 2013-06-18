@@ -25,14 +25,17 @@ sub _build_parser {
   );
 }
 
+our @ACTIVE_FILTERS;
 sub install {
   my ($self) = @_;
   return if $self->active;
+  push @ACTIVE_FILTERS, $self;
   $self->_set_active(1);
   filter_add($self);
   on_scope_end {
     $self->_set_active(0);
     filter_del;
+    pop @ACTIVE_FILTERS;
   };
   $self;
 }

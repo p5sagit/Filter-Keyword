@@ -145,13 +145,11 @@ sub have_match {
 
 sub inject_after_scope {
   my $inject = shift;
+  my $parser = $Filter::Keyword::Filter::ACTIVE_FILTERS[-1]->parser;
+
   on_scope_end {
-    filter_add(sub {
-      DEBUG && print $inject;
-      $_ = $inject;
-      filter_del;
-      1;
-    });
+    my $code = $parser->code;
+    $parser->code($inject . $code);
   };
 }
 
