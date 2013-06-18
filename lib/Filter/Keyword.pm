@@ -98,11 +98,16 @@ sub _build_globref {
 after clear_globref => sub {
   my ($self) = @_;
   $self->stash->remove_symbol('&'.$self->keyword_name);
+  $self->globref_refcount(undef);
+  $self->restore_shadow;
+};
+
+sub restore_shadow {
+  my ($self) = @_;
   if (my $shadowed = $self->_shadowed_sub) {
     { no warnings 'redefine', 'prototype'; *{$self->globref} = $shadowed; }
   }
-  $self->globref_refcount(undef);
-};
+}
 
 has globref_refcount => (is => 'rw');
 

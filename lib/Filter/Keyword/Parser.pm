@@ -27,7 +27,8 @@ has short_circuit => (is => 'rw');
 
 has code => (is => 'rw', default => sub { '' });
 
-has active_keyword => (is => 'rw', clearer => 1);
+has current_keyword => (is => 'rw', clearer => 1);
+has keyword_matched => (is => 'rw');
 
 sub get_next {
   my ($self) = @_;
@@ -36,20 +37,25 @@ sub get_next {
     $self->${\$self->re_add};
     return ('', 0);
   }
-  if (my $keyword = $self->active_keyword) {
-    $self->clear_active_keyword;
-    $keyword->clear_globref;
-    return $keyword->parse($self);
-  }
-  for my $keyword (@{$self->keywords}) {
-    if ($keyword->have_match) {
-      $self->active_keyword($keyword);
+  if (my $keyword = $self->current_keyword) {
+    if ($self->keyword_matched) {
+      $keyword->clear_globref;
+      $self->clear_current_keyword;
+      $self->short_circuit(1);
+      return $keyword->parse($self);
+    }
+    elsif ($keyword->have_match) {
+      $self->keyword_matched(1);
       $self->short_circuit(1);
       my $match = $self->current_match;
       my $end = $match eq '{' ? '}'
               : $match eq '(' ? ')'
                               : '';
       return ("$end;", 1);
+    }
+    else {
+      $keyword->restore_shadow;
+      $self->clear_current_keyword;
     }
   }
   return $self->check_match;
@@ -91,6 +97,8 @@ sub check_match {
     ) {
       $keyword->install_matcher($matches->[0]);
       $self->current_match($matches->[0]);
+      $self->current_keyword($keyword);
+      $self->keyword_matched(0);
       $self->short_circuit(1);
       return ($stripped, 1);
     }
