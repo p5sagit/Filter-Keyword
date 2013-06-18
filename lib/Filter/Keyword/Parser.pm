@@ -27,6 +27,8 @@ has short_circuit => (is => 'rw');
 
 has code => (is => 'rw', default => sub { '' });
 
+has active_keyword => (is => 'rw', clearer => 1);
+
 sub get_next {
   my ($self) = @_;
   if ($self->short_circuit) {
@@ -34,10 +36,20 @@ sub get_next {
     $self->${\$self->re_add};
     return ('', 0);
   }
+  if (my $keyword = $self->active_keyword) {
+    $self->clear_active_keyword;
+    $keyword->clear_globref;
+    return $keyword->parse($self);
+  }
   for my $keyword (@{$self->keywords}) {
     if ($keyword->have_match) {
-      $keyword->clear_globref;
-      return $keyword->parser->($keyword, $self);
+      $self->active_keyword($keyword);
+      $self->short_circuit(1);
+      my $match = $self->current_match->[0];
+      my $end = $match eq '{' ? '}'
+              : $match eq '(' ? ')'
+                              : '';
+      return ("$end;", 1);
     }
   }
   return $self->check_match;

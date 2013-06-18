@@ -39,7 +39,7 @@ sub install {
   };
 }
 
-has _shadowed_sub => (is => 'rw', clearer => '_clear_shadowed_sub');
+has _shadowed_sub => (is => 'rw', clearer => 1);
 
 sub shadow_sub {
   my $self = shift;
@@ -47,7 +47,6 @@ sub shadow_sub {
   if (my $shadowed = $stash->get_symbol('&'.$self->keyword_name)) {
     $self->_shadowed_sub($shadowed);
     $stash->remove_symbol('&'.$self->keyword_name);
-    $stash->add_symbol('&__'.$self->keyword_name, $shadowed);
   }
 }
 
@@ -59,7 +58,6 @@ sub remove {
   my $stash = $self->stash;
   if (my $shadowed = $self->_shadowed_sub) {
     $self->_clear_shadowed_sub;
-    $stash->remove_symbol('&__'.$self->keyword_name);
     $stash->add_symbol('&'.$self->keyword_name, $shadowed);
   }
 }
@@ -78,6 +76,11 @@ has target_package => (is => 'ro', required => 1);
 has keyword_name   => (is => 'ro', required => 1);
 has parser         => (is => 'ro', required => 1);
 
+sub parse {
+  my $self = shift;
+  $self->${\$self->parser}(@_);
+}
+
 has stash => (is => 'lazy');
 
 sub _build_stash {
@@ -95,6 +98,9 @@ sub _build_globref {
 after clear_globref => sub {
   my ($self) = @_;
   $self->stash->remove_symbol('&'.$self->keyword_name);
+  if (my $shadowed = $self->_shadowed_sub) {
+    { no warnings 'redefine', 'prototype'; *{$self->globref} = $shadowed; }
+  }
   $self->globref_refcount(undef);
 };
 
