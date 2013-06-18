@@ -7,6 +7,7 @@ use Scalar::Util qw(weaken);
 use Package::Stash::PP;
 use B qw(svref_2object);
 use B::Hooks::EndOfScope;
+use Scalar::Util qw(set_prototype);
 
 sub _compiling_file () {
   my $depth = 0;
@@ -102,6 +103,15 @@ has globref_refcount => (is => 'rw');
 sub save_refcount {
   my ($self) = @_;
   $self->globref_refcount(svref_2object($self->globref)->REFCNT);
+}
+
+sub install_matcher {
+  my ($self, $post) = @_;
+  my $stash = $self->stash;
+  my $sub = sub {};
+  set_prototype(\&$sub, '*;@') unless $post eq '(';
+  { no warnings 'redefine', 'prototype'; *{$self->globref} = $sub; }
+  $self->save_refcount;
 }
 
 sub have_match {

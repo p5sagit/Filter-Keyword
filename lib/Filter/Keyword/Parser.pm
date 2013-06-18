@@ -1,8 +1,6 @@
 package Filter::Keyword::Parser;
 use Moo;
 
-use Scalar::Util qw(set_prototype);
-
 has reader => (is => 'ro', required => 1);
 
 has re_add => (is => 'ro', required => 1);
@@ -79,10 +77,7 @@ sub check_match {
             $keyword->keyword_name, qr/(\(|[A-Za-z][A-Za-z_0-9]*|{)/
           )
     ) {
-      my $sub = sub {};
-      set_prototype(\&$sub, '*;@') unless $matches->[0] eq '(';
-      { no warnings 'redefine'; *{$keyword->globref} = $sub; }
-      $keyword->save_refcount;
+      $keyword->install_matcher($matches->[0]);
       $self->current_match($matches);
       $self->short_circuit(1);
       return ($stripped, 1);
