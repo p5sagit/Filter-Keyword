@@ -45,7 +45,7 @@ sub get_next {
     if ($keyword->have_match) {
       $self->active_keyword($keyword);
       $self->short_circuit(1);
-      my $match = $self->current_match->[0];
+      my $match = $self->current_match;
       my $end = $match eq '{' ? '}'
               : $match eq '(' ? ')'
                               : '';
@@ -90,7 +90,7 @@ sub check_match {
           )
     ) {
       $keyword->install_matcher($matches->[0]);
-      $self->current_match($matches);
+      $self->current_match($matches->[0]);
       $self->short_circuit(1);
       return ($stripped, 1);
     }
