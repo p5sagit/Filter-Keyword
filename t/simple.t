@@ -63,9 +63,11 @@ method spoon {
 is(__PACKAGE__->spoon, 'I HAZ A SPOON', 'result of second method correct');
 
 #line 1
-shadowed fun { is(__LINE__, 1, 'line number correct inside second keyword'); 'OH WHAT FUN' }
+shadowed fun { is(__LINE__, 1, 'line number correct inside second keyword'); 'OH WHAT FUN' };
 
-is($shadowed_called, 1, 'shadowed sub called only by filter output');
+shadowed fun { is(__LINE__, 1, 'line number correct inside second keyword'); 'OH WHAT FUN' };
+
+is($shadowed_called, 2, 'shadowed sub called only by filter output');
 
 is(__LINE__, 5, 'line number after shadowed correct');
 

@@ -29,6 +29,7 @@ has code => (is => 'rw', default => sub { '' });
 
 has current_keyword => (is => 'rw', clearer => 1);
 has keyword_matched => (is => 'rw');
+has keyword_parsed => (is => 'rw');
 
 sub get_next {
   my ($self) = @_;
@@ -38,10 +39,15 @@ sub get_next {
     return ('', 0);
   }
   if (my $keyword = $self->current_keyword) {
-    if ($self->keyword_matched) {
+    if ($self->keyword_parsed) {
       $keyword->clear_globref;
       $self->clear_current_keyword;
+      $self->keyword_parsed(0);
+    }
+    elsif ($self->keyword_matched) {
+      $keyword->clear_globref;
       $self->short_circuit(1);
+      $self->keyword_parsed(1);
       return $keyword->parse($self);
     }
     elsif ($keyword->have_match) {
