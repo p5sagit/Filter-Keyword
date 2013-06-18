@@ -135,13 +135,9 @@ sub inject_after_scope {
   my $inject = shift;
   on_scope_end {
     filter_add(sub {
-      my($status) ;
-      $status = filter_read();
-      if ($status >= 0) {
-        $_ = $inject . $_;
-      }
+      $_ = $inject;
       filter_del();
-      $status ;
+      1;
     });
   };
 }
