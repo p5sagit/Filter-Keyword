@@ -1,6 +1,9 @@
 package Filter::Keyword::Parser;
 use Moo;
 
+use constant DEBUG => $ENV{FILTER_KEYWORD_DEBUG};
+use constant DEBUG_VERBOSE => DEBUG && $ENV{FILTER_KEYWORD_DEBUG} > 1;
+
 has reader => (is => 'ro', required => 1);
 
 has re_add => (is => 'ro', required => 1);
@@ -40,17 +43,20 @@ sub get_next {
   }
   if (my $keyword = $self->current_keyword) {
     if ($self->keyword_parsed) {
+      DEBUG_VERBOSE && print STDERR "#after parse#";
       $keyword->clear_globref;
       $self->clear_current_keyword;
       $self->keyword_parsed(0);
     }
     elsif ($self->keyword_matched) {
+      DEBUG_VERBOSE && print STDERR "#after match#";
       $keyword->clear_globref;
       $self->short_circuit(1);
       $self->keyword_parsed(1);
       return $keyword->parse($self);
     }
     elsif ($keyword->have_match) {
+      DEBUG_VERBOSE && print STDERR "#just matched#";
       $self->keyword_matched(1);
       $self->short_circuit(1);
       my $match = $self->current_match;

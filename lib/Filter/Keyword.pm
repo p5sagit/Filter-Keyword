@@ -9,6 +9,9 @@ use B qw(svref_2object);
 use B::Hooks::EndOfScope;
 use Scalar::Util qw(set_prototype);
 
+use constant DEBUG => $ENV{FILTER_KEYWORD_DEBUG};
+use constant DEBUG_VERBOSE => DEBUG && $ENV{FILTER_KEYWORD_DEBUG} > 1;
+
 sub _compiling_file () {
   my $depth = 0;
   while (my @caller = caller(++$depth)) {
@@ -35,6 +38,7 @@ sub install {
   $self->keyword_parser($parser);
 
   on_scope_end {
+    DEBUG_VERBOSE && print STDERR "#end of scope#";
     $self->remove;
   };
 }
@@ -78,6 +82,8 @@ has parser         => (is => 'ro', required => 1);
 
 sub parse {
   my $self = shift;
+  no strict 'refs';
+  DEBUG_VERBOSE && print STDERR "#parsing with " . \*{join'::',$self->target_package,$self->keyword_name} . "#";
   $self->${\$self->parser}(@_);
 }
 
@@ -97,6 +103,7 @@ sub _build_globref {
 
 after clear_globref => sub {
   my ($self) = @_;
+  DEBUG_VERBOSE && print STDERR "#removing#";
   $self->stash->remove_symbol('&'.$self->keyword_name);
   $self->globref_refcount(undef);
   $self->restore_shadow;
@@ -105,6 +112,8 @@ after clear_globref => sub {
 sub restore_shadow {
   my ($self) = @_;
   if (my $shadowed = $self->_shadowed_sub) {
+    no strict 'refs';
+    DEBUG_VERBOSE && print STDERR "#adding shadow to " . \*{join'::',$self->target_package,$self->keyword_name} . "#";
     { no warnings 'redefine', 'prototype'; *{$self->globref} = $shadowed; }
   }
 }
@@ -118,9 +127,12 @@ sub save_refcount {
 
 sub install_matcher {
   my ($self, $post) = @_;
-  my $stash = $self->stash;
-  my $sub = sub {};
+  my $sub = sub {
+    DEBUG_VERBOSE && print STDERR "#fake#";
+  };
   set_prototype(\&$sub, '*;@') unless $post eq '(';
+    no strict 'refs';
+  DEBUG_VERBOSE && print STDERR "#adding fake to " . \*{join'::',$self->target_package,$self->keyword_name} . "#";
   { no warnings 'redefine', 'prototype'; *{$self->globref} = $sub; }
   $self->save_refcount;
 }
@@ -135,8 +147,9 @@ sub inject_after_scope {
   my $inject = shift;
   on_scope_end {
     filter_add(sub {
+      DEBUG && print $inject;
       $_ = $inject;
-      filter_del();
+      filter_del;
       1;
     });
   };

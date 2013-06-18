@@ -6,6 +6,9 @@ use Filter::Util::Call;
 use Scalar::Util qw(weaken);
 use B::Hooks::EndOfScope;
 
+use constant DEBUG => $ENV{FILTER_KEYWORD_DEBUG};
+use constant DEBUG_VERBOSE => DEBUG && $ENV{FILTER_KEYWORD_DEBUG} > 1;
+
 has parser => (is => 'lazy');
 has active => (is => 'rwp', default => 0);
 
@@ -14,7 +17,11 @@ sub _build_parser {
   weaken $self;
   Filter::Keyword::Parser->new(
     reader => sub { $_ = ''; my $r = filter_read; ($_, $r) },
-    re_add => sub { filter_add($self) },
+    re_add => sub {
+      DEBUG_VERBOSE && print STDERR "#re-add#";
+      filter_del;
+      filter_add($self)
+    },
   );
 }
 
@@ -34,6 +41,7 @@ sub filter {
   my ($self) = @_;
   my ($string, $code) = $self->parser->get_next;
   $_ = $string;
+  DEBUG && print $string;
   return $code;
 }
 
