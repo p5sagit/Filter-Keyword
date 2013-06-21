@@ -12,25 +12,15 @@ use Scalar::Util qw(set_prototype);
 use constant DEBUG => $ENV{FILTER_KEYWORD_DEBUG};
 use constant DEBUG_VERBOSE => DEBUG && $ENV{FILTER_KEYWORD_DEBUG} > 1;
 
-sub _compiling_file () {
-  my $depth = 0;
-  while (my @caller = caller(++$depth)) {
-    if ($caller[3] =~ /::BEGIN$/) {
-      # older perls report the BEGIN in the wrong file
-      return $depth > 1 ? (caller($depth-1))[1] : $caller[1];
-      #return $caller[1];
-    }
-  }
-  die;
-}
-
-my %filters;
+my $filters = 0;
+my %filter;
 sub install {
   my ($self) = @_;
   $self->shadow_sub;
 
-  my $file = _compiling_file;
-  my $filter = $filters{$file} ||= Filter::Keyword::Filter->new;
+  $^H |= 0x20000;
+  my $filter_num = $^H{'Filter::Keyword::Filter'} ||= ++$filters;
+  my $filter = $filter{$filter_num} ||= Filter::Keyword::Filter->new;
   $filter->install;
 
   my $parser = $filter->parser;
