@@ -1,6 +1,7 @@
 package Filter::Keyword;
 use Moo;
 
+use Lexical::SealRequireHints;
 use Filter::Keyword::Filter;
 use Filter::Util::Call;
 use Scalar::Util qw(weaken);
