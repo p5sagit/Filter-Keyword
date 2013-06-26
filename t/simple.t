@@ -105,4 +105,8 @@ is($shadowed_called, 4, 'shadowed sub called only by filter output');
 
 is(__LINE__, 15, 'line number after shadowed correct');
 
+my $comment_run = 0;
+# comment with method keyword $comment_run++;
+is $comment_run, 0, 'comments not executed';
+
 done_testing;
